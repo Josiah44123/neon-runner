@@ -61,7 +61,7 @@ export const Player = forwardRef<Group, {}>((props, ref) => {
   return (
     <group ref={localRef} position={[0, 0.5, 0]}>
       <mesh castShadow receiveShadow>
-        <sphereGeometry args={[0.5, 32, 32]} /> 
+        <boxGeometry args={[1, 1, 1]} /> 
         <meshStandardMaterial 
             color="#00ffff" 
             emissive="#00ffff" 
@@ -70,7 +70,6 @@ export const Player = forwardRef<Group, {}>((props, ref) => {
             metalness={1}
         />
       </mesh>
-
       <pointLight distance={6} intensity={10} color="#00ffff" />
     </group>
   );
