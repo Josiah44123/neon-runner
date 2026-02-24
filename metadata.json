@@ -1,0 +1,5 @@
+{
+  "name": "Neon Runner 3D",
+  "description": "A high-speed 3D infinite runner game built with React Three Fiber.",
+  "requestFramePermissions": []
+}
