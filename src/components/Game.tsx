@@ -47,7 +47,17 @@ function GameScene() {
       <pointLight position={[-10, 5, -10]} intensity={1} color="#00ff00" />
       
       <color attach="background" args={['#000000']} />
-      <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+      
+      {/* UPDATED: Denser, faster, and slightly colorful stars */}
+      <Stars 
+        radius={50} 
+        depth={100} 
+        count={10000} 
+        factor={6} 
+        saturation={0.8} 
+        fade 
+        speed={3} 
+      />
       
       <fog attach="fog" args={['#000000', 10, 60]} />
 

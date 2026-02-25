@@ -4,14 +4,15 @@ import { useGameStore } from '../store';
 import * as THREE from 'three';
 
 export function Ground() {
-  const ref = useRef<THREE.Mesh>(null);
-  const gridRef = useRef<THREE.GridHelper>(null);
+  const gridRef = useRef<THREE.Mesh>(null);
   const { speed, status } = useGameStore();
 
   useFrame((state, delta) => {
     if (status === 'playing') {
-     
       if (gridRef.current) {
+        // Animates the wireframe grid towards the player. 
+        // We use % 10 for a seamless loop because the cylinder length 
+        // is 1000 with 100 heightSegments (which equals exactly 10 units per segment).
         gridRef.current.position.z = (gridRef.current.position.z + speed * delta) % 10;
       }
     }
@@ -19,18 +20,28 @@ export function Ground() {
 
   return (
     <group>
-      {}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
-        <planeGeometry args={[1000, 1000]} />
+      {/* Solid Base Cylinder (The Dark Surface)
+        Laid on its side along the Z-axis. Radius is 50. 
+        Positioned at Y: -50.5, so the absolute top center is exactly at Y: -0.5.
+        This ensures your player/obstacles stay perfectly grounded with no extra math needed!
+      */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -50.5, 0]} receiveShadow>
+        <cylinderGeometry args={[50, 50, 1000, 64, 1]} />
         <meshStandardMaterial color="#050505" roughness={0.8} metalness={0.2} />
       </mesh>
       
-      {}
-      <gridHelper 
+      {/* Wireframe Grid Cylinder (The Neon Lines) 
+        Replaces the old GridHelper with a curved wireframe mesh.
+      */}
+      <mesh 
         ref={gridRef}
-        args={[1000, 100, 0xff00cc, 0x222222]} 
-        position={[0, -0.49, 0]} 
-      />
+        rotation={[Math.PI / 2, 0, 0]} 
+        position={[0, -50.5, 0]} 
+      >
+        {/* Radius is slightly larger (50.05) to sit just on top of the black ground and prevent graphical glitching (Z-fighting) */}
+        <cylinderGeometry args={[50.05, 50.05, 1000, 48, 100]} />
+        <meshBasicMaterial color="#ff00cc" wireframe transparent opacity={0.25} />
+      </mesh>
     </group>
   );
 }

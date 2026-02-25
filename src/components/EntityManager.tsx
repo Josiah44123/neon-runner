@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Float } from '@react-three/drei';
+import { Float, MeshDistortMaterial } from '@react-three/drei';
 import { useGameStore } from '../store';
 import * as THREE from 'three';
 import { playCrashSound, playCollectSound } from '../audio';
@@ -129,32 +129,65 @@ export function EntityManager({ playerRef }: { playerRef: React.RefObject<THREE.
 const EntityMesh = ({ type }: { type: EntityType }) => {
   const config = ENTITY_CONFIG[type];
   
-  const mesh = (
-    <mesh castShadow receiveShadow>
-      {type === 'error' ? (
-        <boxGeometry args={[1, 1, 1]} />
-      ) : (
-        <octahedronGeometry args={[0.6]} />
-      )}
-      <meshStandardMaterial 
-        color={config.color} 
-        emissive={config.color} 
-        emissiveIntensity={0.8}
-        roughness={0.2}
-        metalness={0.8}
-        transparent
-        opacity={0.9}
-      />
-    </mesh>
-  );
-
   if (type === 'error') {
-    return mesh;
+    return (
+      <Float speed={6} rotationIntensity={3} floatIntensity={0.5}>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[1, 1, 1, 4, 4, 4]} />
+          
+          <MeshDistortMaterial 
+            color={config.color} 
+            emissive={config.color} 
+            emissiveIntensity={1.5}
+            roughness={0.2}
+            metalness={0.8}
+            distort={0.4}
+            speed={5}
+          />
+          
+          <mesh>
+            <boxGeometry args={[1.1, 1.1, 1.1]} />
+            <meshBasicMaterial 
+              color="#ff5555" 
+              wireframe 
+              transparent 
+              opacity={0.6} 
+              blending={THREE.AdditiveBlending}
+            />
+          </mesh>
+        </mesh>
+      </Float>
+    );
   }
 
   return (
-    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-      {mesh}
+    <Float speed={3} rotationIntensity={1.5} floatIntensity={1}>
+      <mesh castShadow receiveShadow>
+        <octahedronGeometry args={[0.6]} />
+        <meshPhysicalMaterial 
+          color={config.color}
+          emissive={config.color}
+          emissiveIntensity={0.4}
+          roughness={0.1}
+          metalness={0.1}
+          transmission={0.9} 
+          ior={2.4}          
+          thickness={0.5}    
+          clearcoat={1}      
+          clearcoatRoughness={0.1}
+        />
+        
+        <mesh>
+          <octahedronGeometry args={[0.601]} />
+          <meshBasicMaterial 
+            color="#ffffff" 
+            wireframe 
+            transparent 
+            opacity={0.4} 
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      </mesh>
     </Float>
   );
 };
