@@ -131,32 +131,19 @@ const EntityMesh = ({ type }: { type: EntityType }) => {
   
   if (type === 'error') {
     return (
-      <Float speed={6} rotationIntensity={3} floatIntensity={0.5}>
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[1, 1, 1, 4, 4, 4]} />
-          
-          <MeshDistortMaterial 
-            color={config.color} 
-            emissive={config.color} 
-            emissiveIntensity={1.5}
-            roughness={0.2}
-            metalness={0.8}
-            distort={0.4}
-            speed={5}
-          />
-          
-          <mesh>
-            <boxGeometry args={[1.1, 1.1, 1.1]} />
-            <meshBasicMaterial 
-              color="#ff5555" 
-              wireframe 
-              transparent 
-              opacity={0.6} 
-              blending={THREE.AdditiveBlending}
-            />
-          </mesh>
-        </mesh>
-      </Float>
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[1, 1, 1, 4, 4, 4]} />
+        <MeshDistortMaterial 
+          color={config.color} 
+          emissive={config.color} 
+          emissiveIntensity={1.5}
+          roughness={0.2}
+          metalness={0.8}
+          distort={0.4}
+          speed={5}
+        />
+        {/* Removed the wireframe mesh */}
+      </mesh>
     );
   }
 
@@ -176,17 +163,7 @@ const EntityMesh = ({ type }: { type: EntityType }) => {
           clearcoat={1}      
           clearcoatRoughness={0.1}
         />
-        
-        <mesh>
-          <octahedronGeometry args={[0.601]} />
-          <meshBasicMaterial 
-            color="#ffffff" 
-            wireframe 
-            transparent 
-            opacity={0.4} 
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
+        {}
       </mesh>
     </Float>
   );
