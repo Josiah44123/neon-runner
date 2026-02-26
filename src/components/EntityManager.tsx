@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Float, MeshDistortMaterial } from '@react-three/drei';
+import { Float } from '@react-three/drei';
 import { useGameStore } from '../store';
 import * as THREE from 'three';
 import { playCrashSound, playCollectSound } from '../audio';
@@ -132,17 +132,16 @@ const EntityMesh = ({ type }: { type: EntityType }) => {
   if (type === 'error') {
     return (
       <mesh castShadow receiveShadow>
-        <boxGeometry args={[1, 1, 1, 4, 4, 4]} />
-        <MeshDistortMaterial 
+        {/* Reverted to standard box geometry with no extra segments */}
+        <boxGeometry args={[1, 1, 1]} />
+        {/* Swapped MeshDistortMaterial for a static standard material */}
+        <meshStandardMaterial 
           color={config.color} 
           emissive={config.color} 
-          emissiveIntensity={1.5}
-          roughness={0.2}
-          metalness={0.8}
-          distort={0.4}
-          speed={5}
+          emissiveIntensity={0.8}
+          roughness={0.6}
+          metalness={0.2}
         />
-        {/* Removed the wireframe mesh */}
       </mesh>
     );
   }
@@ -163,7 +162,6 @@ const EntityMesh = ({ type }: { type: EntityType }) => {
           clearcoat={1}      
           clearcoatRoughness={0.1}
         />
-        {}
       </mesh>
     </Float>
   );
