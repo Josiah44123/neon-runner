@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Float } from '@react-three/drei';
 import { useGameStore } from '../store';
@@ -8,6 +8,8 @@ import { playCrashSound, playCollectSound } from '../audio';
 const ENTITY_COUNT = 25;
 const SPAWN_DISTANCE = 120;
 const LANE_WIDTH = 3;
+const DESPAWN_Z = 5;
+const COLLISION_THRESHOLD = 0.8;
 
 type EntityType = 'error' | 'feature' | 'coffee';
 
@@ -26,24 +28,23 @@ const ENTITY_CONFIG = {
 };
 
 export function EntityManager({ playerRef }: { playerRef: React.RefObject<THREE.Group> }) {
-  const { speed, status, actions } = useGameStore();
+  const status = useGameStore((state) => state.status);
   const groupRef = useRef<THREE.Group>(null);
   
-  const [entityList] = useState(() => {
-    return new Array(ENTITY_COUNT).fill(0).map((_, i) => ({
+  const entities = useRef<EntityData[]>(
+    Array.from({ length: ENTITY_COUNT }, (_, i) => ({
       z: -SPAWN_DISTANCE - (i * (SPAWN_DISTANCE / 5)),
       x: (Math.floor(Math.random() * 3) - 1) * LANE_WIDTH,
       type: Math.random() > 0.4 ? 'error' : (Math.random() > 0.5 ? 'feature' : 'coffee') as EntityType, 
       active: true,
-      ref: null as THREE.Group | null,
-    }));
-  });
-  
-  const entities = useRef<EntityData[]>(entityList);
+      ref: null,
+    }))
+  );
 
   useFrame((state, delta) => {
     if (status !== 'playing') return;
 
+    const { speed, actions } = useGameStore.getState();
     const playerPos = playerRef.current?.position;
 
     entities.current.forEach((entity) => {
@@ -51,7 +52,7 @@ export function EntityManager({ playerRef }: { playerRef: React.RefObject<THREE.
 
       entity.z += speed * delta;
       
-      if (entity.z > 5 || !entity.active) {
+      if (entity.z > DESPAWN_Z || !entity.active) {
         respawnEntity(entity);
       }
 
@@ -65,8 +66,8 @@ export function EntityManager({ playerRef }: { playerRef: React.RefObject<THREE.
         const dx = Math.abs(playerPos.x - entity.x);
         const dz = Math.abs(playerPos.z - entity.z);
         
-        if (dx < 0.8 && dz < 0.8) {
-          handleCollision(entity);
+        if (dx < COLLISION_THRESHOLD && dz < COLLISION_THRESHOLD) {
+          handleCollision(entity, speed, actions);
         }
       }
     });
@@ -85,7 +86,7 @@ export function EntityManager({ playerRef }: { playerRef: React.RefObject<THREE.
     if (entity.ref) entity.ref.scale.setScalar(0.1);
   };
 
-  const handleCollision = (entity: EntityData) => {
+  const handleCollision = (entity: EntityData, currentSpeed: number, actions: any) => {
     const config = ENTITY_CONFIG[entity.type];
     
     if (config.damage) {
@@ -96,7 +97,7 @@ export function EntityManager({ playerRef }: { playerRef: React.RefObject<THREE.
       actions.incrementScore(config.score);
       entity.active = false;
       
-      if (speed < 50) actions.setSpeed(speed + 0.2);
+      if (currentSpeed < 50) actions.setSpeed(currentSpeed + 0.2);
     }
   };
 
@@ -129,19 +130,20 @@ export function EntityManager({ playerRef }: { playerRef: React.RefObject<THREE.
 const EntityMesh = ({ type }: { type: EntityType }) => {
   const config = ENTITY_CONFIG[type];
   
+  const errorMaterial = useMemo(() => (
+    <meshStandardMaterial 
+      color={ENTITY_CONFIG.error.color} 
+      emissive={ENTITY_CONFIG.error.color} 
+      emissiveIntensity={0.8}
+      roughness={0.6}
+      metalness={0.2}
+    />
+  ), []);
+
   if (type === 'error') {
     return (
-      <mesh castShadow receiveShadow>
-        {/* Reverted to standard box geometry with no extra segments */}
+      <mesh castShadow receiveShadow material={errorMaterial}>
         <boxGeometry args={[1, 1, 1]} />
-        {/* Swapped MeshDistortMaterial for a static standard material */}
-        <meshStandardMaterial 
-          color={config.color} 
-          emissive={config.color} 
-          emissiveIntensity={0.8}
-          roughness={0.6}
-          metalness={0.2}
-        />
       </mesh>
     );
   }
