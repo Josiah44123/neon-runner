@@ -13,7 +13,11 @@ const COLLISION_THRESHOLD = 0.8;
 
 type EntityType = 'error' | 'feature' | 'coffee';
 
-
+const ENTITY_CONFIG = {
+  error: { color: '#ff0000', score: 0, damage: true },
+  feature: { color: '#00ff00', score: 10, damage: false },
+  coffee: { color: '#00ffff', score: 50, damage: false },
+};
 
 const errorGeometry = new THREE.BoxGeometry(1, 1, 1);
 const floatGeometry = new THREE.OctahedronGeometry(0.6);
