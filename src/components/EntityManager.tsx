@@ -1,6 +1,5 @@
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Float } from '@react-three/drei';
 import * as THREE from 'three';
 import { useGameStore } from '../store';
 import { playCrashSound, playCollectSound } from '../audio';
@@ -49,54 +48,38 @@ const materials = {
 };
 
 function GameEntity({ initialZ, playerRef }: { initialZ: number, playerRef: React.RefObject<THREE.Group> }) {
-  const ref = useRef<THREE.Group>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
   
-  const [type, setType] = useState<EntityType>(() => 
-    Math.random() > 0.4 ? 'error' : (Math.random() > 0.5 ? 'feature' : 'coffee')
-  );
-  
+  const typeRef = useRef<EntityType>('error');
   const isActive = useRef(true);
+  const floatOffset = useRef(Math.random() * Math.PI * 2);
 
-  useMemo(() => {
-    if (ref.current) {
-      ref.current.position.z = initialZ;
-      ref.current.position.x = (Math.floor(Math.random() * 3) - 1) * LANE_WIDTH;
+  const resetEntity = () => {
+    if (!groupRef.current || !meshRef.current) return;
+    
+    groupRef.current.position.x = (Math.floor(Math.random() * 3) - 1) * LANE_WIDTH;
+    
+    const rand = Math.random();
+    const newType: EntityType = rand < 0.4 ? 'error' : (rand < 0.7 ? 'feature' : 'coffee');
+    typeRef.current = newType;
+    
+    meshRef.current.geometry = newType === 'error' ? errorGeometry : floatGeometry;
+    meshRef.current.material = materials[newType];
+    
+    isActive.current = true;
+    groupRef.current.scale.setScalar(0.1);
+  };
+
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.z = initialZ;
+      resetEntity();
     }
   }, [initialZ]);
 
-  useFrame((_, delta) => {
-    if (!ref.current) return;
-    const { status, speed, actions } = useGameStore.getState();
-    if (status !== 'playing') return;
-
-    ref.current.position.z += speed * delta;
-
-    if (ref.current.position.z > DESPAWN_Z) {
-      ref.current.position.z = -SPAWN_DISTANCE - Math.random() * 40;
-      ref.current.position.x = (Math.floor(Math.random() * 3) - 1) * LANE_WIDTH;
-      isActive.current = true;
-      ref.current.scale.setScalar(0.1);
-
-      const rand = Math.random();
-      setType(rand < 0.5 ? 'error' : (rand < 0.8 ? 'feature' : 'coffee'));
-    }
-
-    const targetScale = isActive.current ? 1 : 0;
-    ref.current.scale.setScalar(THREE.MathUtils.lerp(ref.current.scale.x, targetScale, delta * 10));
-
-    const playerPos = playerRef.current?.position;
-    if (playerPos && isActive.current) {
-      const dx = Math.abs(playerPos.x - ref.current.position.x);
-      const dz = Math.abs(playerPos.z - ref.current.position.z);
-      
-      if (dx < COLLISION_THRESHOLD && dz < COLLISION_THRESHOLD) {
-        handleCollision(speed, actions);
-      }
-    }
-  });
-
   const handleCollision = (currentSpeed: number, actions: any) => {
-    const config = ENTITY_CONFIG[type];
+    const config = ENTITY_CONFIG[typeRef.current];
     
     if (config.damage) {
       playCrashSound();
@@ -105,20 +88,49 @@ function GameEntity({ initialZ, playerRef }: { initialZ: number, playerRef: Reac
       playCollectSound();
       actions.incrementScore(config.score);
       isActive.current = false;
-      
       if (currentSpeed < 50) actions.setSpeed(currentSpeed + 0.2);
     }
   };
 
+  useFrame((state, delta) => {
+    if (!groupRef.current || !meshRef.current) return;
+    const { status, speed, actions } = useGameStore.getState();
+    if (status !== 'playing') return;
+
+    groupRef.current.position.z += speed * delta;
+
+    if (typeRef.current !== 'error') {
+      meshRef.current.rotation.x += delta * 1.5;
+      meshRef.current.rotation.y += delta * 1.5;
+      meshRef.current.position.y = Math.sin((state.clock.elapsedTime * 3) + floatOffset.current) * 0.2;
+    } else {
+      meshRef.current.rotation.set(0, 0, 0);
+      meshRef.current.position.y = 0;
+    }
+
+    if (groupRef.current.position.z > DESPAWN_Z) {
+      const totalTrackLength = ENTITY_COUNT * (SPAWN_DISTANCE / 5);
+      groupRef.current.position.z -= totalTrackLength;
+      resetEntity();
+    }
+
+    const targetScale = isActive.current ? 1 : 0;
+    groupRef.current.scale.setScalar(THREE.MathUtils.lerp(groupRef.current.scale.x, targetScale, delta * 10));
+
+    const playerPos = playerRef.current?.position;
+    if (playerPos && isActive.current) {
+      const dx = Math.abs(playerPos.x - groupRef.current.position.x);
+      const dz = Math.abs(playerPos.z - groupRef.current.position.z);
+      
+      if (dx < COLLISION_THRESHOLD && dz < COLLISION_THRESHOLD) {
+        handleCollision(speed, actions);
+      }
+    }
+  });
+
   return (
-    <group ref={ref}>
-      {type === 'error' ? (
-        <mesh castShadow receiveShadow geometry={errorGeometry} material={materials.error} />
-      ) : (
-        <Float speed={3} rotationIntensity={1.5} floatIntensity={1}>
-          <mesh castShadow receiveShadow geometry={floatGeometry} material={materials[type]} />
-        </Float>
-      )}
+    <group ref={groupRef}>
+      <mesh ref={meshRef} castShadow receiveShadow />
     </group>
   );
 }
