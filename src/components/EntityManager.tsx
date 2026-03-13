@@ -1,57 +1,12 @@
-import { useRef, useEffect, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
-import { useGameStore } from '../store';
-import { playCrashSound, playCollectSound } from '../audio';
-
-const ENTITY_COUNT = 25;
-const SPAWN_DISTANCE = 120;
-const LANE_WIDTH = 3;
-const DESPAWN_Z = 5;
-const COLLISION_THRESHOLD = 0.8;
-
-type EntityType = 'error' | 'feature' | 'coffee';
-
-const ENTITY_CONFIG = {
-  error: { color: '#ff0000', score: 0, damage: true },
-  feature: { color: '#00ff00', score: 10, damage: false },
-  coffee: { color: '#00ffff', score: 50, damage: false },
-};
-
-const errorGeometry = new THREE.BoxGeometry(1, 1, 1);
-const floatGeometry = new THREE.OctahedronGeometry(0.6);
-
-const materials = {
-  error: new THREE.MeshStandardMaterial({
-    color: ENTITY_CONFIG.error.color,
-    emissive: ENTITY_CONFIG.error.color,
-    emissiveIntensity: 0.8,
-    roughness: 0.6,
-    metalness: 0.2,
-  }),
-  feature: new THREE.MeshPhysicalMaterial({
-    color: ENTITY_CONFIG.feature.color,
-    emissive: ENTITY_CONFIG.feature.color,
-    emissiveIntensity: 0.4,
-    roughness: 0.1,
-    metalness: 0.1,
-    transmission: 0.9, ior: 2.4, thickness: 0.5, clearcoat: 1, clearcoatRoughness: 0.1,
-  }),
-  coffee: new THREE.MeshPhysicalMaterial({
-    color: ENTITY_CONFIG.coffee.color,
-    emissive: ENTITY_CONFIG.coffee.color,
-    emissiveIntensity: 0.4,
-    roughness: 0.1,
-    metalness: 0.1,
-    transmission: 0.9, ior: 2.4, thickness: 0.5, clearcoat: 1, clearcoatRoughness: 0.1,
-  })
-};
-
 function GameEntity({ initialZ, playerRef }: { initialZ: number, playerRef: React.RefObject<THREE.Group> }) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   
-  const typeRef = useRef<EntityType>('error');
+  // 1. Initialize with your original 60% error probability right off the bat
+  const typeRef = useRef<EntityType>(
+    Math.random() > 0.4 ? 'error' : (Math.random() > 0.5 ? 'feature' : 'coffee')
+  );
+  
   const isActive = useRef(true);
   const floatOffset = useRef(Math.random() * Math.PI * 2);
 
@@ -60,8 +15,8 @@ function GameEntity({ initialZ, playerRef }: { initialZ: number, playerRef: Reac
     
     groupRef.current.position.x = (Math.floor(Math.random() * 3) - 1) * LANE_WIDTH;
     
-    const rand = Math.random();
-    const newType: EntityType = rand < 0.4 ? 'error' : (rand < 0.7 ? 'feature' : 'coffee');
+    // Restore original 60% probability logic here too
+    const newType: EntityType = Math.random() > 0.4 ? 'error' : (Math.random() > 0.5 ? 'feature' : 'coffee');
     typeRef.current = newType;
     
     meshRef.current.geometry = newType === 'error' ? errorGeometry : floatGeometry;
@@ -74,7 +29,9 @@ function GameEntity({ initialZ, playerRef }: { initialZ: number, playerRef: Reac
   useEffect(() => {
     if (groupRef.current) {
       groupRef.current.position.z = initialZ;
-      resetEntity();
+      // Just set the initial X position on mount, don't call resetEntity() 
+      // otherwise it overwrites the initial typeRef we just set
+      groupRef.current.position.x = (Math.floor(Math.random() * 3) - 1) * LANE_WIDTH;
     }
   }, [initialZ]);
 
@@ -130,21 +87,14 @@ function GameEntity({ initialZ, playerRef }: { initialZ: number, playerRef: Reac
 
   return (
     <group ref={groupRef}>
-      <mesh ref={meshRef} castShadow receiveShadow />
-    </group>
-  );
-}
-
-export function EntityManager({ playerRef }: { playerRef: React.RefObject<THREE.Group> }) {
-  const initialPositions = useMemo(() => 
-    Array.from({ length: ENTITY_COUNT }, (_, i) => -SPAWN_DISTANCE - (i * (SPAWN_DISTANCE / 5))),
-  []);
-
-  return (
-    <group>
-      {initialPositions.map((zPos, i) => (
-        <GameEntity key={i} initialZ={zPos} playerRef={playerRef} />
-      ))}
+      <mesh 
+        ref={meshRef} 
+        castShadow 
+        receiveShadow 
+        // 2. Pass the initial geometry and material so R3F successfully mounts them
+        geometry={typeRef.current === 'error' ? errorGeometry : floatGeometry}
+        material={materials[typeRef.current]}
+      />
     </group>
   );
 }
